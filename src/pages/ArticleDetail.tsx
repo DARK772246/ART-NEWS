@@ -14,17 +14,26 @@ const ArticleDetail = () => {
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
 
   useEffect(() => {
-    const articles = getArticles();
-    const found = articles.find((a) => a.id === id);
-    if (found) {
-      setArticle(found);
-      // Get related articles from same category
-      const related = articles
-        .filter((a) => a.category === found.category && a.id !== found.id)
-        .slice(0, 3);
-      setRelatedArticles(related);
-    }
-    setLoading(false);
+    const loadArticle = async () => {
+      try {
+        const articles = await getArticles();
+        const found = articles.find((a) => a.id === id);
+        if (found) {
+          setArticle(found);
+          // Get related articles from same category
+          const related = articles
+            .filter((a) => a.category === found.category && a.id !== found.id)
+            .slice(0, 3);
+          setRelatedArticles(related);
+        }
+      } catch (error) {
+        console.error("Failed to load article:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadArticle();
   }, [id]);
 
   if (loading) {

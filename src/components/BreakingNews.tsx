@@ -6,9 +6,18 @@ export const BreakingNews = () => {
   const [items, setItems] = useState<Article[]>([]);
 
   useEffect(() => {
-    const articles = getArticles();
-    const breaking = articles.filter((a) => a.isBreaking).slice(0, 10);
-    setItems(breaking);
+    const loadBreakingNews = async () => {
+      try {
+        const articles = await getArticles();
+        const breaking = articles.filter((a) => a.isBreaking).slice(0, 10);
+        setItems(breaking);
+      } catch (error) {
+        console.error("Failed to load breaking news:", error);
+        setItems([]);
+      }
+    };
+    
+    loadBreakingNews();
   }, []);
 
   // fallback messages if no breaking articles

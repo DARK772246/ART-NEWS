@@ -12,8 +12,17 @@ export const LatestNews = () => {
   const { searchQuery, selectedCategory } = useSearch();
 
   useEffect(() => {
-    const data = getArticles();
-    setArticles(data);
+    const loadArticles = async () => {
+      try {
+        const data = await getArticles();
+        setArticles(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to load articles:", error);
+        setArticles([]);
+      }
+    };
+    
+    loadArticles();
   }, []);
 
   useEffect(() => {

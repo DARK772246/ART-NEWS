@@ -12,12 +12,16 @@ const Index = () => {
   const [hasArticles, setHasArticles] = useState<boolean | null>(null);
 
   useEffect(() => {
-    try {
-      const articles = getArticles();
-      setHasArticles(Array.isArray(articles) && articles.length > 0);
-    } catch {
-      setHasArticles(false);
-    }
+    const checkArticles = async () => {
+      try {
+        const articles = await getArticles();
+        setHasArticles(Array.isArray(articles) && articles.length > 0);
+      } catch {
+        setHasArticles(false);
+      }
+    };
+    
+    checkArticles();
   }, []);
 
   return (
