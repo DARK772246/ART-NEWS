@@ -11,96 +11,97 @@ export interface Article {
   isBreaking?: boolean;
   isHero?: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
-const STORAGE_KEY = "artnews_articles";
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const seedArticles: Article[] = [
-  {
-    id: "1",
-    title: "Global Leaders Convene for Historic Summit on Future Technologies",
-    excerpt:
-      "World leaders and tech visionaries gather to discuss the transformative impact of artificial intelligence, sustainable innovation, and the future of global cooperation in an unprecedented summit.",
-    content: "",
-    category: "World",
-    author: "Sarah Mitchell",
-    time: "2 hours ago",
-    image:
-      "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=800&fit=crop",
-    isHero: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    title: "Revolutionary AI System Achieves Breakthrough in Medical Research",
-    excerpt: "New artificial intelligence platform demonstrates unprecedented accuracy in early disease detection.",
-    category: "Technology",
-    author: "James Chen",
-    time: "4 hours ago",
-    image:
-      "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=600&h=400&fit=crop",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    title: "Economic Markets Respond to New International Trade Agreements",
-    excerpt: "Global markets show positive momentum following landmark trade deal announcements.",
-    category: "Business",
-    author: "Emily Watson",
-    time: "5 hours ago",
-    image:
-      "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&h=400&fit=crop",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "4",
-    title: "Sustainable Energy Initiative Gains Global Momentum",
-    excerpt: "Countries worldwide commit to ambitious renewable energy targets in coordinated effort.",
-    category: "World",
-    time: "1 hour ago",
-    image:
-      "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=400&h=300&fit=crop",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "5",
-    title: "Cultural Heritage Sites Receive Unprecedented Protection",
-    excerpt: "New international framework ensures preservation of humanity's most treasured locations.",
-    category: "Culture",
-    time: "3 hours ago",
-    image:
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-    createdAt: new Date().toISOString(),
-  },
-];
-
-export function getArticles(): Article[] {
+export async function getArticles(): Promise<Article[]> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      // seed initial data
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(seedArticles));
-      return seedArticles;
+    const response = await fetch(`${API_URL}/api/articles`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch articles');
     }
-    return JSON.parse(raw) as Article[];
-  } catch (e) {
-    console.error("Failed to read articles from localStorage", e);
-    return seedArticles;
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch articles:', error);
+    return [];
   }
 }
 
-export function saveArticle(article: Article) {
-  const articles = getArticles();
-  const idx = articles.findIndex((a) => a.id === article.id);
-  if (idx >= 0) {
-    articles[idx] = article;
-  } else {
-    articles.unshift(article);
+export async function getArticleById(id: string): Promise<Article | null> {
+  try {
+    const response = await fetch(`${API_URL}/api/articles/${id}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch article');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch article:', error);
+    return null;
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(articles));
 }
 
-export function deleteArticle(id: string) {
-  const articles = getArticles().filter((a) => a.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(articles));
+export async function saveArticle(article: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>, editingId?: string) {
+  try {
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      throw new Error('No authentication token');
+    }
+
+    const formData = new FormData();
+    formData.append('title', article.title);
+    formData.append('excerpt', article.excerpt);
+    formData.append('content', article.content || '');
+    formData.append('category', article.category);
+    formData.append('author', article.author || '');
+    formData.append('isHero', String(article.isHero || false));
+    formData.append('isBreaking', String(article.isBreaking || false));
+
+    const method = editingId ? 'PUT' : 'POST';
+    const url = editingId ? `${API_URL}/api/articles/${editingId}` : `${API_URL}/api/articles`;
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save article');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to save article:', error);
+    throw error;
+  }
 }
+
+export async function deleteArticle(id: string) {
+  try {
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      throw new Error('No authentication token');
+    }
+
+    const response = await fetch(`${API_URL}/api/articles/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete article');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to delete article:', error);
+    throw error;
+  }
+}
+
